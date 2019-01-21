@@ -1,60 +1,63 @@
-# Anaconda: Tic-Tac-Toe Coding Challenge
-Your mission, should you choose to accept it, is to implement a two-player game of Tic-tac-toe in the web browser.
+# Tic Tac Toe Challenge
 
-## Rules
+## Setup and run:
+Written in python 3.7.1. Postgres used for database.
 
-HONOR RULES: You must do this challenge on your own, without assistance or review from others, and without copying from the Internet. You will be asked to affirm that you developed your work independently.
+```
+pip install -r requirements.txt
+pip install -U .
+python tictactoe/app.py
+```
 
-TIME LIMIT: You have 3 days from the date you receive a link to this site. You may submit your work earlier.
+## Playing
+Create a game:
+```
+requests.post('http://localhost:5000/api/games', headers={'content-type': 'application/json'}, data=json.dumps({'player1': 'foo', 'player2': 'bar'}))
+```
 
-TASK: Your task it implement a simple but comprehensive REST API for a [tic-tac-toe game](https://en.wikipedia.org/wiki/Tic-tac-toe)
+Which returns you back a newly created game with an ID and who will go first:
 
-## Requirements
+```
+ {'id': 31,
+ 'circle': 'bar',
+ 'cross': 'foo',
+ 'board': [[None, None, None], [None, None, None], [None, None, None]],
+ 'next_turn': 'cross',
+ 'closed': False,
+ 'winner': None}
+```
 
-The basic requirements for the game are:
+You can then post to make your move. Game spaces are ordered by passing a coordinate value. Coordinates for the board:
+```
+(0, 0) | (0, 1) | (0, 2)
+------------------------
+(1, 0) | (1, 1) | (1, 2)
+------------------------
+(2, 0) | (2, 1) | (2, 2)
+```
 
-store a game board data structure that contains the game information
-allow two players to enter their names, and automatically assign one of them the circle and the other the 'x'allow each to play a turn, one at a time, during which the player selects a square of the board and it is filled in with their symbol
-indicate when one of the players has won, or the game is a draw
-In addition to implementing basic gameplay, the user must be able to save their game to the server.
+```
+requests.post('http://localhost:5000/api/games/31', headers={'content-type': 'application/json'}, data=json.dumps({'player': 'foo', 'x': 2, 'y': 1})); resp.status_code, resp.json()
+```
 
-Since this is a coding challenge, the success of your mission depends on building a good rest API implementation. 
+Which will return you the game state:
 
-Make sure to provide instruction about how to setup, run and consume your REST API.
+```
+ {'id': 31,
+  'circle': 'bar',
+  'cross': 'foo',
+  'board': [[None, None, None], [None, None, None], [None, 1, None]],
+  'next_turn': 'circle',
+  'closed': False,
+  'winner': None}
+```
 
-## Technologies
+## Implementation/Analysis
+The implementation is done using Flask with a couple of helpful plugins.
 
-We prefer Python and the tornado framework, but they are not required. You can use whatever technology you prefer.
+* Flask-RESTful: Handled a lot of the boilerplate for creating REST APIs
+* FlaskSQLAlchemy: For the model and database communication layer
 
-Game data structure
-A game consists of:
+A single "Games" model is stored in the database. There's a few design choices to be made here, but the most interesting is the board. Since postgres was used for the database, SQLAlchemy has support for multidimensional arrays, so a 2D integer array was stored in the database
 
-two players, represented by their names as strings
-a board data structure (we are leaving you the choice of what data structure is more appropriate for the task). Keep in mind that this data structure needs to trak the status of each board element. Each element is null if the square is blank, or either 0 or 1 to indicate which player controls the square. 
-
-Server API
-The server should complies with the JSON API specification.
-
-- `GET /api/games`: Return a list of the Games known to the server, as JSON.
-
-
-- `POST /api/games`: Create a new `Game`, assigning it an ID and returning the newly created `Game`.
-
-- `GET /api/games/<id>`: Retrieve a `Game` by its ID, returning a `404` status
-  code if no game with that ID exists.
-
-- `POST /api/games/<id>`: Update the `Game` with the given ID, replacing its data with the newly `POST`ed data.
-
-## Optional
-
-If you have extra time and want to take on an additional challenge, you may choose to implement:
-
- - viewing & restoring saved games
- - an "AI" player option, where someone can play against the computer
-
-However, please be aware that we'd prefer a more polished implementation to more features!
-
-## Submission
-
-When you are ready, please submit your challenge as a pull request
-against this repository.
+The rest of the API is pretty straight forward, though a few shortcuts were made (specifically in regards to some getattr's). There's an interesting Flask-SQLAlchemy issue when trying to update a 2D Array, hence a terrible double statement execution. The game_state function is also grizzly to say the least. Both of which could use refactoring and optimizations.
